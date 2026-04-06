@@ -70,9 +70,10 @@ brand-kit-capture/
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/health` | Health check |
-| GET | `/api/presign/upload?filename=...` | Get signed PUT URL for upload |
-| GET | `/api/presign/view?object_name=...` | Get signed GET URL for viewing |
-| GET | `/api/swatches` | List all swatches with fresh signed view URLs |
+| GET | `/api/presign/upload?filename=&folder=` | Signed PUT URL (`folder`: `swatches` or `typography`) |
+| GET | `/api/presign/view?object_name=` | Signed GET URL for viewing |
+| GET | `/api/swatches` | List color palette captures |
+| GET | `/api/typography` | List typography card captures |
 
 ## Quick Start
 
@@ -123,7 +124,8 @@ Vite dev server runs on http://localhost:5173, backend on http://localhost:8000.
 
 | Variable | Description |
 |----------|-------------|
-| `VITE_API_URL` | Backend URL (e.g. `https://your-api.railway.app`) |
+| `VITE_GOOGLE_FONTS_API_KEY` | Google Fonts API key (restrict to your domain in GCP) |
+| `VITE_API_URL` | Backend URL (e.g. `https://your-service.asia-south1.run.app`) |
 
 ## GCS Setup
 
@@ -158,32 +160,26 @@ base64 -i service-account.json | tr -d '\n'
 3. Set env var: `VITE_API_URL` = your backend URL
 4. Deploy
 
-### Backend → Railway
-
-1. Connect GitHub repo, set root directory to `backend`
-2. Set env vars: `GCS_BUCKET_NAME`, `GCS_CREDENTIALS_JSON`, `FRONTEND_URL`
-3. Railway auto-detects the Dockerfile
-
 ### Backend → Cloud Run
 
 ```bash
 cd backend
-gcloud run deploy swatch-api \
+gcloud run deploy brand-kit-capture-api \
   --source . \
   --region asia-south1 \
   --allow-unauthenticated \
-  --set-env-vars="GCS_BUCKET_NAME=your-bucket,FRONTEND_URL=https://your-app.vercel.app,GCS_CREDENTIALS_JSON=<base64>"
+  --set-env-vars="GCS_BUCKET_NAME=your-bucket,FRONTEND_URL=https://brand-kit-capture.vercel.app,GCS_CREDENTIALS_JSON=<base64>"
 ```
 
 ## How It Works
 
-1. User edits swatch colors via color pickers
-2. Clicks **Save & Upload**
+1. User edits a color swatch or typography card
+2. Clicks **Save & Upload** (edit panel auto-closes first if open)
 3. `html-to-image` captures the card at 2x resolution via SVG foreignObject → canvas
-4. `upng-js` quantizes the canvas pixels to 256-color PNG-8 (50-70% smaller, visually identical for solid-color content)
-5. Frontend gets a presigned PUT URL from the backend
+4. `upng-js` quantizes the canvas pixels to 256-color PNG-8 (50-70% smaller, visually identical)
+5. Frontend gets a presigned PUT URL from the backend with the correct folder (`swatches/` or `typography/`)
 6. Frontend uploads the optimized blob directly to GCS (backend never touches the bytes)
-7. Gallery refreshes from GCS via `/api/swatches`, showing file size on each image
+7. Gallery refreshes from `/api/swatches` or `/api/typography` showing file size and upload timestamp
 
 ## Image Optimization
 
