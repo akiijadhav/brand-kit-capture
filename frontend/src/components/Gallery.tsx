@@ -10,14 +10,16 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function formatEntryName(objectName: string): string {
-  const match = objectName.match(/\d{10,}/);
-  if (!match) return objectName.replace("swatches/", "").replace("typography/", "");
-  const date = new Date(parseInt(match[0]));
-  return date.toLocaleString("en-US", {
-    month: "short", day: "numeric", year: "numeric",
-    hour: "numeric", minute: "2-digit", hour12: true,
-  });
+function formatEntryName(entry: { object_name: string; created_at: string | null }): string {
+  const raw = entry.created_at ?? null;
+  const date = raw ? new Date(raw) : null;
+  if (date && !isNaN(date.getTime())) {
+    return date.toLocaleString("en-US", {
+      month: "short", day: "numeric", year: "numeric",
+      hour: "numeric", minute: "2-digit", hour12: true,
+    });
+  }
+  return entry.object_name.replace("swatches/", "").replace("typography/", "");
 }
 
 interface GalleryProps {
@@ -100,7 +102,7 @@ export default function Gallery({ entries, loading, title }: GalleryProps) {
                 className="text-xs text-muted-foreground truncate flex-1"
                 title={entry.object_name}
               >
-                {formatEntryName(entry.object_name)}
+                {formatEntryName(entry)}
               </span>
               <button
                 onClick={() => copyUrl(entry.view_url, entry.object_name)}
